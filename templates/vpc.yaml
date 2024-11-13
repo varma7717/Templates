@@ -1,0 +1,152 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: AWS CloudFormation Template to create a VPC, Subnet, Internet Gateway, and an EC2 instance
+
+Parameters:
+  vpcname:
+    Type: String
+    Description: Enter VPC name
+    Default: myvpc
+  subnet1:
+    Type: String
+    Description: Enter subnet1
+    Default: mysubnet1
+  subnet2:
+    Type: String
+    Description: Enter subnet2
+    Default: mysubnet2
+  internetgateway:
+    Type: String
+    Description: Enter internetgateway name
+    Default: myinternet
+  routetable:
+    Type: String
+    Description: Enter routetable name
+    Default: myroutetable
+  securitygroup:
+    Type: String
+    Description: Enter securitygroup name
+    Default: mysecuritygroup
+  ec2instance:
+    Type: String
+    Description: Enter ec2instance name
+    Default: myec2instance
+  keypair:
+    Type: String
+    Description: Enter key pair name
+    Default: dev1
+  amiid:
+    Type: String
+    Description: Enter AMI ID
+    Default: ami-0195204d5dce06d99
+
+Resources:
+  AjayVPC:
+    Type: 'AWS::EC2::VPC'
+    Properties:
+      CidrBlock: '10.20.0.0/16'
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: !Ref vpcname
+
+  AjaySubnet1:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref AjayVPC
+      CidrBlock: '10.20.1.0/24'
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Ref subnet1
+
+  AjaySubnet2:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref AjayVPC
+      CidrBlock: '10.20.2.0/24'
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Ref subnet2
+
+  AjayInternetGateway:
+    Type: 'AWS::EC2::InternetGateway'
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Ref internetgateway
+
+  AjayVPCGatewayAttachment:
+    Type: 'AWS::EC2::VPCGatewayAttachment'
+    Properties:
+      VpcId: !Ref AjayVPC
+      InternetGatewayId: !Ref AjayInternetGateway
+
+  AjayRouteTable:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref AjayVPC
+      Tags:
+        - Key: Name
+          Value: !Ref routetable
+
+  AjayRoute:
+    Type: 'AWS::EC2::Route'
+    DependsOn: AjayVPCGatewayAttachment
+    Properties:
+      RouteTableId: !Ref AjayRouteTable
+      DestinationCidrBlock: '0.0.0.0/0'
+      GatewayId: !Ref AjayInternetGateway
+
+  AjaySubnetRouteTableAssociation1:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref AjaySubnet1
+      RouteTableId: !Ref AjayRouteTable
+
+  AjaySubnetRouteTableAssociation2:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref AjaySubnet2
+      RouteTableId: !Ref AjayRouteTable
+
+  AjaySecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: Allow SSH and HTTP
+      VpcId: !Ref AjayVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '22'
+          ToPort: '22'
+          CidrIp: '0.0.0.0/0'
+        - IpProtocol: tcp
+          FromPort: '80'
+          ToPort: '80'
+          CidrIp: '0.0.0.0/0'
+      Tags:
+        - Key: Name
+          Value: !Ref securitygroup
+
+  AjayEC2Instance:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      InstanceType: t2.micro
+      KeyName: !Ref keypair
+      SecurityGroupIds:
+        - !Ref AjaySecurityGroup
+      SubnetId: !Ref AjaySubnet1
+      ImageId: !Ref amiid
+      Tags:
+        - Key: Name
+          Value: !Ref ec2instance
+
+Outputs:
+  InstanceId:
+    Description: 'Instance ID'
+    Value: !Ref AjayEC2Instance
+
+  InstancePublicIp:
+    Description: 'Instance Public IP'
+    Value: !GetAtt AjayEC2Instance.PublicIp

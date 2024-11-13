@@ -1,0 +1,193 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Parameters:
+  vpcname:
+    Type: String
+    Description: enter vpc name
+    Default: myvpc
+  cidrblock:
+    Type: String
+    Description: enter cidrblock
+    Default: '10.0.0.0/16'
+  publicsubnet1:
+    Type: String
+    Description: enter publicsubnet1
+    Default: '10.0.1.0/24'
+  publicsubnet2:
+    Type: String
+    Description: enter publicsubnet2
+    Default: '10.0.2.0/24'
+  privatesubnet1:
+    Type: String
+    Description: enter privatesubnet1
+    Default: '10.0.3.0/24'
+  privatesubnet2:
+    Type: String
+    Description: enter privatesubnet2
+    Default: '10.0.4.0/24'
+
+Resources:
+  VPC:
+    Type: 'AWS::EC2::VPC'
+    Properties:
+      CidrBlock: !Ref cidrblock
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: !Ref vpcname
+
+  InternetGateway:
+    Type: 'AWS::EC2::InternetGateway'
+    Properties:
+      Tags:
+        - Key: Name
+          Value: InternetGateway
+
+  VPCGatewayAttachment:
+    Type: 'AWS::EC2::VPCGatewayAttachment'
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+
+  PublicRouteTable:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: PublicRouteTable
+
+  DefaultPublicRoute:
+    Type: 'AWS::EC2::Route'
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: '0.0.0.0/0'
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnet1:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      CidrBlock: !Ref publicsubnet1
+      VpcId: !Ref VPC
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: PublicSubnet1
+
+  PublicSubnet2:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      CidrBlock: !Ref publicsubnet2
+      VpcId: !Ref VPC
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: PublicSubnet2
+
+  PublicSubnet1RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref PublicSubnet1
+      RouteTableId: !Ref PublicRouteTable
+
+  PublicSubnet2RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref PublicSubnet2
+      RouteTableId: !Ref PublicRouteTable
+
+  ElasticIPAddress:
+    Type: 'AWS::EC2::EIP'
+    Properties:
+      Domain: vpc
+
+  NATGateway:
+    Type: 'AWS::EC2::NatGateway'
+    Properties:
+      AllocationId: !GetAtt ElasticIPAddress.AllocationId
+      SubnetId: !Ref PublicSubnet1
+      Tags:
+        - Key: Name
+          Value: NATGateway
+
+  PrivateRouteTable:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: PrivateRouteTable
+
+  PrivateRoute:
+    Type: 'AWS::EC2::Route'
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      DestinationCidrBlock: '0.0.0.0/0'
+      NatGatewayId: !Ref NATGateway
+
+  PrivateSubnet1:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      CidrBlock: !Ref privatesubnet1
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: PrivateSubnet1
+
+  PrivateSubnet2:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      CidrBlock: !Ref privatesubnet2
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: PrivateSubnet2
+
+  PrivateSubnet1RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref PrivateSubnet1
+      RouteTableId: !Ref PrivateRouteTable
+
+  PrivateSubnet2RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref PrivateSubnet2
+      RouteTableId: !Ref PrivateRouteTable
+
+Outputs:
+  VPCId:
+    Value: !Ref VPC
+    Export:
+      Name: VPCId
+  InternetGatewayId:
+    Value: !Ref InternetGateway
+    Export:
+      Name: InternetGatewayId
+  PublicSubnet1Id:
+    Value: !Ref PublicSubnet1
+    Export:
+      Name: PublicSubnet1Id
+  PublicSubnet2Id:
+    Value: !Ref PublicSubnet2
+    Export:
+      Name: PublicSubnet2Id
+  PrivateSubnet1Id:
+    Value: !Ref PrivateSubnet1
+    Export:
+      Name: PrivateSubnet1Id
+  PrivateSubnet2Id:
+    Value: !Ref PrivateSubnet2
+    Export:
+      Name: PrivateSubnet2Id
+  PublicRouteTableId:
+    Value: !Ref PublicRouteTable
+    Export:
+      Name: PublicRouteTableId
+  PrivateRouteTableId:
+    Value: !Ref PrivateRouteTable
+    Export:
+      Name: PrivateRouteTableId
+  NATGatewayId:
+    Value: !Ref NATGateway

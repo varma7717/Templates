@@ -1,0 +1,54 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Parameters:
+  InstanceType:
+    Type: String
+    Default: 't2.micro'
+
+  ImageId:
+    Type: String
+
+  KeyName:
+    Type: String
+
+  SubnetId:
+    Type: String
+
+  SecurityGroupId:
+    Type: String
+
+Resources:
+  MyNetworkInterface:
+    Type: 'AWS::EC2::NetworkInterface'
+    Properties:
+      SubnetId: !Ref SubnetId
+      GroupSet:
+        - !Ref SecurityGroupId
+
+  MyEC2Instance:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      InstanceType: !Ref InstanceType
+      ImageId: !Ref ImageId
+      KeyName: !Ref KeyName
+      NetworkInterfaces:
+        - DeviceIndex: 0
+          NetworkInterfaceId: !Ref MyNetworkInterface
+      Tags:
+        - Key: 'Name'
+          Value: 'MyEC2Instance'
+      UserData:
+        Fn::Base64: |
+          #!/bin/bash
+          yum update -y
+          amazon-linux-extras install nginx1.12 -y
+          service nginx start
+          echo "<div><h1>PUBLIC-SERVER</h1></div>" >> /usr/share/nginx/html/index.html
+          echo "<div><h1>DEV-OPS 2023</h1></div>" >> /usr/share/nginx/html/index.html
+
+Outputs:
+  InstanceId:
+    Value: !Ref MyEC2Instance
+
+  PublicIP:
+    Value: !GetAtt MyNetworkInterface.Association.PublicIp
